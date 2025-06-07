@@ -3,7 +3,9 @@ package plewa.service;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import plewa.entity.Task;
+import plewa.entity.User;
 import plewa.repository.TaskRepository;
+import plewa.repository.UserRepository;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -12,9 +14,11 @@ import java.util.List;
 public class TaskService {
 
     private TaskRepository taskRepository;
+    private UserRepository userRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository) {
         this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
     }
 
     public void addTask(String description, LocalDate dueDate) {
@@ -54,4 +58,38 @@ public class TaskService {
         return taskRepository.findAll(Sort.by("dueDate").ascending());
     }
 
+
+    public void assignTaskToUser(Long userId, Long taskId) {
+        Task task = taskRepository.findById(taskId).orElseThrow(() -> new RuntimeException("task not found"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("user not found"));
+        task.setUser(user);
+
+        taskRepository.save(task);
+    }
+
+
+    public void addNewTaskAndAssignToUser(String description, LocalDate dueDate, Long userId) {
+        Task task = new Task(description, dueDate);
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("user not found"));
+        task.setUser(user);
+
+        taskRepository.save(task);
+    }
+
+
+    public List<Task> getAllUserTasks(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        return taskRepository.findAllByUser(user);
+    }
+
+
+    public void deleteAllUserTasks(Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        List<Task> taskList = taskRepository.findAllByUser(user);
+
+        for (Task task : taskList) {
+            taskRepository.delete(task);
+        }
+
+    }
 }
